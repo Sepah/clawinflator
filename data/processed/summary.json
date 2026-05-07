@@ -1,0 +1,19 @@
+{
+  "latest_cpi_period": "2025-12",
+  "latest_cpi_value": 107.07,
+  "base_cpi": 106.1,
+  "base_year": 2023,
+  "annual_hours": 2184,
+  "current_salary_year": 2026,
+  "nominal_monthly": 8100.0,
+  "nominal_annual": 105300.0,
+  "nominal_hourly": 48.21,
+  "real_monthly": 8026.74,
+  "real_annual": 104347.67,
+  "real_hourly": 47.78,
+  "cumulative_inflation_pct": 0.91,
+  "nominal_increase_vs_base_pct": 10.96,
+  "real_increase_vs_base_pct": 9.96,
+  "annual_gain_loss_vs_base": 9447.67,
+  "monthly_gain_loss_vs_base": 726.74
+}

@@ -1,0 +1,63 @@
+name: Monthly salary tracker update
+
+on:
+  schedule:
+    # Runs on the 5th of every month at 06:00 UTC
+    # (Swiss FSO typically publishes the previous month's CPI in the first week)
+    - cron: "0 6 5 * *"
+  workflow_dispatch:          # allow manual runs from the Actions tab
+
+permissions:
+  contents: write             # needed to commit updated files back
+  pages: write                # needed to deploy to GitHub Pages
+  id-token: write             # needed for OIDC-based Pages deployment
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline (fetch CPI → calculate → build dashboard)
+        run: python src/main.py
+
+      - name: Commit updated data and dashboard
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/ data/raw/cpi_raw.csv dashboard/index.html
+          # Only commit if something changed
+          git diff --cached --quiet || git commit -m "chore: monthly data update $(date +'%Y-%m')"
+
+      - name: Push changes
+        run: git push origin HEAD
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/
+
+  deploy-pages:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
