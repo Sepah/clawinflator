@@ -204,6 +204,11 @@ def build_html(
     cpi_periods = df_cpi_full[["period", "cpi"]].to_dict(orient="records")
     available_years = sorted({int(p["period"][:4]) for p in cpi_periods})
 
+    salary_history_defaults = [
+        {"year": int(r["year"]), "annual": int(r["nominal_annual"])}
+        for _, r in df_yearly.iterrows()
+    ]
+
     calc_payload = json.dumps({
         "cpi_data": cpi_periods,
         "available_years": available_years,
@@ -212,6 +217,7 @@ def build_html(
         "default_weeks": region["weeks_per_year"],
         "currency_symbol": region["currency_symbol"],
         "thousand_sep": region["thousand_sep"],
+        "salary_history_defaults": salary_history_defaults,
     })
 
     fmt_cur = lambda v, d=0: _fmt_currency(v, region, d)
@@ -490,6 +496,49 @@ def build_html(
     @media (max-width: 380px) {{
       .kpi-grid {{ grid-template-columns: 1fr; }}
     }}
+
+    /* ────────── Salary history ────────── */
+    .hist-table {{ width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 0.9rem; }}
+    .hist-table th {{
+      text-align: left; font-size: 0.72rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border);
+    }}
+    .hist-table td {{ padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); }}
+    .hist-table td:last-child {{ width: 2.5rem; }}
+    .hist-table input {{
+      width: 100%; padding: 0.45rem 0.6rem; font-size: 0.9rem; font-family: inherit;
+      border: 1.5px solid var(--border-strong); border-radius: 6px;
+      background: var(--bg); color: var(--text);
+    }}
+    .hist-table input:focus {{ outline: none; border-color: var(--accent); }}
+    .hist-del-btn {{
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer; color: var(--muted); padding: 0.3rem 0.55rem;
+      font-size: 1rem; line-height: 1; transition: all 0.15s ease;
+    }}
+    .hist-del-btn:hover {{ color: var(--negative); border-color: var(--negative); }}
+    .hist-add-btn {{
+      background: none; border: 1px solid var(--accent); border-radius: 8px;
+      cursor: pointer; color: var(--accent); padding: 0.5rem 1rem;
+      font-size: 0.85rem; font-weight: 600; font-family: inherit; transition: all 0.15s ease;
+    }}
+    .hist-add-btn:hover {{ background: color-mix(in srgb, var(--accent) 10%, transparent); }}
+    .hist-result-tbl {{ width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 0.5rem; }}
+    .hist-result-tbl th {{
+      padding: 0.5rem 0.75rem; text-align: right; font-weight: 600; white-space: nowrap;
+      font-size: 0.72rem; letter-spacing: 0.02em; text-transform: uppercase;
+      background: var(--primary-dark); color: white;
+    }}
+    .hist-result-tbl th:first-child {{ text-align: left; }}
+    .hist-result-tbl td {{
+      padding: 0.5rem 0.75rem; text-align: right; border-top: 1px solid var(--border);
+      white-space: nowrap; font-variant-numeric: tabular-nums;
+    }}
+    .hist-result-tbl td:first-child {{ text-align: left; font-weight: 600; }}
+    @media (prefers-color-scheme: dark) {{
+      .hist-result-tbl th {{ background: var(--border-strong); color: var(--text); }}
+    }}
   </style>
 </head>
 <body>
@@ -590,11 +639,12 @@ def build_html(
   </div>
 
   <!-- ── Interactive calculator ─────────────────────── -->
-  <div class="section-title">🧮 Try with your own data</div>
+  <div class="section-title">Try with your own data</div>
   <div class="calculator">
     <div class="calc-tabs" role="tablist">
       <button class="calc-tab active" data-tab="single" role="tab">Real salary now</button>
       <button class="calc-tab" data-tab="compare" role="tab">Compare two years</button>
+      <button class="calc-tab" data-tab="history" role="tab">Salary history</button>
     </div>
 
     <!-- ── Mode 1: single salary ── -->
@@ -652,10 +702,30 @@ def build_html(
         <div class="calc-results" id="cmp-results"></div>
       </div>
     </div>
+
+    <!-- ── Mode 3: salary history ── -->
+    <div class="calc-pane" data-pane="history">
+      <p class="calc-hint">Enter your salary at different points in time. The calculator converts each to real purchasing power, so you can see how much your salary has actually grown after inflation.</p>
+      <div style="display:flex; gap:0.75rem; margin-bottom:0.85rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="calc-field" style="min-width:160px;">
+          <label for="hist-base">Reference year for real values</label>
+          <select id="hist-base"></select>
+        </div>
+      </div>
+      <table class="hist-table">
+        <thead>
+          <tr><th>Year</th><th>Annual salary ({region['currency']})</th><th></th></tr>
+        </thead>
+        <tbody id="hist-rows"></tbody>
+      </table>
+      <button class="hist-add-btn" id="hist-add">+ Add year</button>
+      <div id="hist-chart" style="margin-top:1rem; min-height:280px;"></div>
+      <div id="hist-result-table" style="margin-top:0.75rem; overflow-x:auto;"></div>
+    </div>
   </div>
 
   <!-- ── Charts ─────────────────────────────────────── -->
-  <div class="section-title">📈 Charts</div>
+  <div class="section-title">Charts</div>
   <div class="chart-grid">
     <div class="chart-card"><div id="chart-yearly"></div></div>
     <div class="chart-card"><div id="chart-hourly"></div></div>
@@ -664,7 +734,7 @@ def build_html(
   </div>
 
   <!-- ── Year-by-year table ─────────────────────────── -->
-  <div class="section-title">📊 Year-by-year detail</div>
+  <div class="section-title">Year-by-year detail</div>
   <div class="table-card">
     <div class="table-scroll">
       <table>
@@ -860,11 +930,11 @@ def build_html(
 
     var msg;
     if (realChange > 0.5) {{
-      msg = '🎉 You got <strong>' + fmtPct(realChange) + '</strong> richer in real terms';
+      msg = 'You got <strong>' + fmtPct(realChange) + '</strong> richer in real terms';
     }} else if (realChange < -0.5) {{
-      msg = '📉 You got <strong>' + fmtPct(realChange) + '</strong> poorer in real terms';
+      msg = 'You got <strong>' + fmtPct(realChange) + '</strong> poorer in real terms';
     }} else {{
-      msg = '⚖️ Your purchasing power is roughly the same';
+      msg = 'Your purchasing power is roughly the same';
     }}
 
     html += '<div class="calc-result full headline"><div class="lbl">Verdict (' + ya + ' → ' + yb + ')</div>' +
@@ -888,12 +958,115 @@ def build_html(
   }});
   compare();
 
+  // ────────── Salary history mode ──────────
+  var histBaseSel = document.getElementById('hist-base');
+  CALC.available_years.forEach(function(y) {{
+    var o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === CALC.default_base_year) o.selected = true;
+    histBaseSel.appendChild(o);
+  }});
+  histBaseSel.addEventListener('change', calcHistory);
+
+  document.getElementById('hist-add').addEventListener('click', function() {{
+    appendHistRow('', '');
+    calcHistory();
+  }});
+
+  function appendHistRow(year, annual) {{
+    var tbody = document.getElementById('hist-rows');
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="number" class="hist-year" value="' + (year || '') + '" min="1988" max="2030" step="1" placeholder="Year" inputmode="numeric"></td>' +
+      '<td><input type="number" class="hist-sal" value="' + (annual || '') + '" min="0" step="1000" placeholder="Annual salary" inputmode="numeric"></td>' +
+      '<td><button class="hist-del-btn" type="button">&times;</button></td>';
+    tr.querySelector('.hist-del-btn').addEventListener('click', function() {{
+      tr.parentNode.removeChild(tr);
+      calcHistory();
+    }});
+    tr.querySelector('.hist-year').addEventListener('input', calcHistory);
+    tr.querySelector('.hist-sal').addEventListener('input', calcHistory);
+    tbody.appendChild(tr);
+  }}
+
+  function calcHistory() {{
+    var rows = document.querySelectorAll('#hist-rows tr');
+    var data = [];
+    rows.forEach(function(tr) {{
+      var yr = parseInt(tr.querySelector('.hist-year').value);
+      var sal = parseFloat(tr.querySelector('.hist-sal').value);
+      if (yr >= 1988 && yr <= 2030 && sal > 0 && cpiByYear[yr]) {{
+        data.push({{year: yr, annual: sal}});
+      }}
+    }});
+    data.sort(function(a, b) {{ return a.year - b.year; }});
+
+    var chartEl = document.getElementById('hist-chart');
+    var resultDiv = document.getElementById('hist-result-table');
+
+    if (data.length < 2) {{
+      resultDiv.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0">Add at least 2 valid years to see results.</p>';
+      if (chartEl && chartEl.data) Plotly.purge(chartEl);
+      return;
+    }}
+
+    var baseYear = parseInt(histBaseSel.value);
+    var baseCpi = cpiByYear[baseYear];
+    var years = data.map(function(d) {{ return d.year; }});
+    var nominals = data.map(function(d) {{ return d.annual; }});
+    var reals = data.map(function(d) {{
+      return baseCpi && cpiByYear[d.year] ? d.annual * baseCpi / cpiByYear[d.year] : null;
+    }});
+
+    var darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var fontColor = darkMode ? '#cbd5e1' : '#0f172a';
+    Plotly.newPlot('hist-chart', [
+      {{x: years, y: nominals, name: 'Nominal', type: 'scatter', mode: 'lines+markers',
+        line: {{color: '#3b82f6', width: 3}}, marker: {{size: 8}}}},
+      {{x: years, y: reals, name: 'Real (' + baseYear + ')', type: 'scatter', mode: 'lines+markers',
+        line: {{color: '#22c55e', width: 3}}, marker: {{size: 8}}}}
+    ], {{
+      paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+      font: {{family: 'Inter, -apple-system, sans-serif', size: 12, color: fontColor}},
+      title: 'Salary history: nominal vs real (' + baseYear + ' ' + CALC.currency_symbol + ')',
+      yaxis: {{title: CALC.currency_symbol, tickformat: ',.0f'}},
+      xaxis: {{title: 'Year', type: 'category'}},
+      legend: {{orientation: 'h', y: -0.2}},
+      margin: {{t: 50, b: 60, l: 70, r: 20}}
+    }}, {{responsive: true, displayModeBar: false}});
+
+    var firstReal = reals[0];
+    var tbl = '<table class="hist-result-tbl"><thead><tr>' +
+      '<th>Year</th><th>Nominal</th><th>Real (' + baseYear + ')</th>' +
+      '<th>Inflation vs ' + baseYear + '</th><th>Real vs ' + data[0].year + '</th>' +
+      '</tr></thead><tbody>';
+    data.forEach(function(d, i) {{
+      var r = reals[i];
+      var infl = baseCpi && cpiByYear[d.year] ? (cpiByYear[d.year] / baseCpi - 1) * 100 : null;
+      var realChg = r !== null && firstReal !== null && firstReal !== 0 ? (r / firstReal - 1) * 100 : null;
+      var chgCls = realChg === null ? '' : (realChg >= 0 ? ' class="positive"' : ' class="negative"');
+      tbl += '<tr><td>' + d.year + '</td><td>' + fmtNum(d.annual) + '</td><td>' + fmtNum(r) +
+             '</td><td>' + fmtPct(infl) + '</td><td' + chgCls + '>' + fmtPct(realChg) + '</td></tr>';
+    }});
+    tbl += '</tbody></table>';
+    resultDiv.innerHTML = tbl;
+  }}
+
+  CALC.salary_history_defaults.forEach(function(d) {{
+    appendHistRow(d.year, d.annual);
+  }});
+  calcHistory();
+
   // ────────── Tabs ──────────
   document.querySelectorAll('.calc-tab').forEach(function(btn) {{
     btn.addEventListener('click', function() {{
       var tab = btn.dataset.tab;
       document.querySelectorAll('.calc-tab').forEach(function(b) {{ b.classList.toggle('active', b === btn); }});
       document.querySelectorAll('.calc-pane').forEach(function(p) {{ p.classList.toggle('active', p.dataset.pane === tab); }});
+      if (tab === 'history') {{
+        var hc = document.getElementById('hist-chart');
+        if (hc && hc.data && hc.data.length) Plotly.relayout('hist-chart', {{autosize: true}});
+      }}
     }});
   }});
 </script>

@@ -64,8 +64,8 @@ REGIONS = {
         "output_html": "dashboard/uk.html",
         "theme_color": "#012169",     # UK blue
         "salary_note": (
-            "Placeholder figures roughly tracking a UK upper-mid full-time salary "
-            "(2023 = £45k). Edit config/salary_inputs_uk.csv with your own."
+            "Default figures: £37k (2019) → £62k (2023). "
+            "Edit config/salary_inputs_uk.csv with your own figures."
         ),
     },
 }
