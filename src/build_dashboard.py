@@ -181,6 +181,7 @@ def build_html(
     summary: dict,
     df_yearly: pd.DataFrame,
     df_monthly: pd.DataFrame,
+    df_cpi_full: pd.DataFrame,
     region: dict,
     all_regions: Iterable[dict],
 ) -> str:
@@ -199,8 +200,8 @@ def build_html(
     chart_gain = _chart_gain(df_monthly, region)
     table_rows = _table_rows(df_yearly, region)
 
-    # Calculator data: monthly CPI series, available years, base year
-    cpi_periods = df_monthly[["period", "cpi"]].to_dict(orient="records") if not df_monthly.empty else []
+    # Calculator data: pass FULL CPI history (for compare-two-years feature)
+    cpi_periods = df_cpi_full[["period", "cpi"]].to_dict(orient="records")
     available_years = sorted({int(p["period"][:4]) for p in cpi_periods})
 
     calc_payload = json.dumps({
@@ -388,6 +389,35 @@ def build_html(
       margin-top: 0.25rem; letter-spacing: -0.01em;
     }}
     .calc-result.full {{ grid-column: 1 / -1; }}
+    .calc-result.headline {{
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--card)),
+                                          color-mix(in srgb, var(--accent) 4%, var(--card)));
+      border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+    }}
+    .calc-result.headline .val {{ font-size: 1.35rem; }}
+    .calc-tabs {{
+      display: flex; gap: 0.4rem; margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }}
+    .calc-tab {{
+      background: none; border: none; cursor: pointer;
+      padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600;
+      color: var(--muted); font-family: inherit;
+      border-bottom: 2.5px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }}
+    .calc-tab:hover {{ color: var(--text); }}
+    .calc-tab.active {{ color: var(--accent); border-bottom-color: var(--accent); }}
+    .calc-pane {{ display: none; }}
+    .calc-pane.active {{ display: block; animation: fadeIn 0.2s ease; }}
+    @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(4px); }} to {{ opacity: 1; transform: none; }} }}
+    .calc-hint {{
+      font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.6;
+    }}
+    .calc-hint em {{ font-style: normal; font-weight: 600; color: var(--text); }}
+    .calc-row {{ display: grid; grid-template-columns: 1fr 1.4fr; gap: 0.6rem; }}
 
     /* ────────── Charts ────────── */
     .chart-grid {{
@@ -560,28 +590,67 @@ def build_html(
   </div>
 
   <!-- ── Interactive calculator ─────────────────────── -->
-  <div class="section-title">🧮 Try with your own salary</div>
+  <div class="section-title">🧮 Try with your own data</div>
   <div class="calculator">
-    <div class="calc-grid">
-      <div class="calc-inputs">
-        <div class="calc-field">
-          <label for="calc-salary">Your annual salary ({region['currency']})</label>
-          <input type="number" id="calc-salary" value="{int(summary['nominal_annual'])}" min="0" step="100">
+    <div class="calc-tabs" role="tablist">
+      <button class="calc-tab active" data-tab="single" role="tab">Real salary now</button>
+      <button class="calc-tab" data-tab="compare" role="tab">Compare two years</button>
+    </div>
+
+    <!-- ── Mode 1: single salary ── -->
+    <div class="calc-pane active" data-pane="single">
+      <p class="calc-hint">Plug in your salary; see what it's worth in any reference year, with current inflation.</p>
+      <div class="calc-grid">
+        <div class="calc-inputs">
+          <div class="calc-field">
+            <label for="calc-salary">Your annual salary ({region['currency']})</label>
+            <input type="number" id="calc-salary" value="{int(summary['nominal_annual'])}" min="0" step="100" inputmode="numeric">
+          </div>
+          <div class="calc-field">
+            <label for="calc-hours">Weekly hours</label>
+            <input type="number" id="calc-hours" value="{region['weekly_hours']}" min="1" step="0.5" inputmode="decimal">
+          </div>
+          <div class="calc-field">
+            <label for="calc-base">Reference year (purchasing power baseline)</label>
+            <select id="calc-base"></select>
+          </div>
+          <div class="calc-field">
+            <label for="calc-cur">Inflation up to (CPI month)</label>
+            <select id="calc-cur"></select>
+          </div>
         </div>
-        <div class="calc-field">
-          <label for="calc-hours">Weekly hours</label>
-          <input type="number" id="calc-hours" value="{region['weekly_hours']}" min="1" step="0.5">
-        </div>
-        <div class="calc-field">
-          <label for="calc-base">Base year (your reference point)</label>
-          <select id="calc-base"></select>
-        </div>
-        <div class="calc-field">
-          <label for="calc-cur">Compare against (CPI month)</label>
-          <select id="calc-cur"></select>
-        </div>
+        <div class="calc-results" id="calc-results"></div>
       </div>
-      <div class="calc-results" id="calc-results"></div>
+    </div>
+
+    <!-- ── Mode 2: compare two years ── -->
+    <div class="calc-pane" data-pane="compare">
+      <p class="calc-hint">Compare two salaries from different years. Example: <em>2010 = {region['currency_symbol']} 50,000</em> vs <em>2025 = {region['currency_symbol']} 150,000</em>. The calculator shows your <strong>real</strong> raise after inflation.</p>
+      <div class="calc-grid">
+        <div class="calc-inputs">
+          <div class="calc-row">
+            <div class="calc-field">
+              <label for="cmp-year-a">From year</label>
+              <select id="cmp-year-a"></select>
+            </div>
+            <div class="calc-field">
+              <label for="cmp-sal-a">Salary then ({region['currency']})</label>
+              <input type="number" id="cmp-sal-a" value="50000" min="0" step="100" inputmode="numeric">
+            </div>
+          </div>
+          <div class="calc-row">
+            <div class="calc-field">
+              <label for="cmp-year-b">To year</label>
+              <select id="cmp-year-b"></select>
+            </div>
+            <div class="calc-field">
+              <label for="cmp-sal-b">Salary now ({region['currency']})</label>
+              <input type="number" id="cmp-sal-b" value="80000" min="0" step="100" inputmode="numeric">
+            </div>
+          </div>
+        </div>
+        <div class="calc-results" id="cmp-results"></div>
+      </div>
     </div>
   </div>
 
@@ -735,6 +804,98 @@ def build_html(
   baseSel.addEventListener('change', recalc);
   curSel.addEventListener('change', recalc);
   recalc();
+
+  // ────────── Compare two years mode ──────────
+  var yearASel = document.getElementById('cmp-year-a');
+  var yearBSel = document.getElementById('cmp-year-b');
+  var salAEl = document.getElementById('cmp-sal-a');
+  var salBEl = document.getElementById('cmp-sal-b');
+
+  CALC.available_years.forEach(function(y) {{
+    var oa = document.createElement('option');
+    oa.value = y; oa.textContent = y;
+    yearASel.appendChild(oa);
+    var ob = document.createElement('option');
+    ob.value = y; ob.textContent = y;
+    yearBSel.appendChild(ob);
+  }});
+
+  // Sensible defaults: ~10 years apart, ending at most-recent year
+  var lastYear = CALC.available_years[CALC.available_years.length - 1];
+  var startYear = CALC.available_years.indexOf(lastYear - 10) >= 0 ? lastYear - 10 : CALC.available_years[0];
+  yearASel.value = startYear;
+  yearBSel.value = lastYear;
+
+  function compare() {{
+    var ya = parseInt(yearASel.value);
+    var yb = parseInt(yearBSel.value);
+    var sa = parseFloat(salAEl.value) || 0;
+    var sb = parseFloat(salBEl.value) || 0;
+    var cpiA = cpiByYear[ya];
+    var cpiB = cpiByYear[yb];
+
+    var html = '';
+    function box(lbl, val, cls, headline) {{
+      var c = 'calc-result';
+      if (headline) c += ' full headline';
+      return '<div class="' + c + '">' +
+             '<div class="lbl">' + lbl + '</div>' +
+             '<div class="val' + (cls? ' ' + cls : '') + '">' + val + '</div></div>';
+    }}
+
+    if (!cpiA || !cpiB || sa <= 0 || sb <= 0) {{
+      document.getElementById('cmp-results').innerHTML =
+        box('Need both salaries to compare', '—');
+      return;
+    }}
+
+    var inflation = (cpiB / cpiA - 1) * 100;             // total price change A→B
+    var nomChange = (sb / sa - 1) * 100;                 // nominal raise %
+    var realB_inA = sb * cpiA / cpiB;                    // salary B in year-A money
+    var realChange = (realB_inA / sa - 1) * 100;         // real raise %
+    var equivToday = sa * cpiB / cpiA;                   // salary A grown to year-B money to keep parity
+    var gainLoss = realB_inA - sa;                       // real CHF/£ gained vs A
+    var yearsApart = yb - ya;
+    var realCagr = yearsApart > 0 ? (Math.pow(realB_inA / sa, 1 / yearsApart) - 1) * 100 : 0;
+
+    var msg;
+    if (realChange > 0.5) {{
+      msg = '🎉 You got <strong>' + fmtPct(realChange) + '</strong> richer in real terms';
+    }} else if (realChange < -0.5) {{
+      msg = '📉 You got <strong>' + fmtPct(realChange) + '</strong> poorer in real terms';
+    }} else {{
+      msg = '⚖️ Your purchasing power is roughly the same';
+    }}
+
+    html += '<div class="calc-result full headline"><div class="lbl">Verdict (' + ya + ' → ' + yb + ')</div>' +
+            '<div class="val">' + msg + '</div></div>';
+    html += box('Inflation between ' + ya + ' and ' + yb, fmtPct(inflation), 'negative');
+    html += box('Nominal change in salary', fmtPct(nomChange), nomChange >= 0 ? 'positive' : 'negative');
+    html += box(ya + ' salary in ' + yb + ' money', fmtNum(equivToday));
+    html += box(yb + ' salary in ' + ya + ' money', fmtNum(realB_inA));
+    html += box('Real raise (' + yearsApart + ' yrs)', fmtPct(realChange), realChange >= 0 ? 'positive' : 'negative');
+    if (yearsApart > 0) {{
+      html += box('Annualised real growth', fmtPct(realCagr, 2), realCagr >= 0 ? 'positive' : 'negative');
+    }}
+    html += box('Real gain / loss vs ' + ya, fmtNum(gainLoss), gainLoss >= 0 ? 'positive' : 'negative', true);
+
+    document.getElementById('cmp-results').innerHTML = html;
+  }}
+
+  [yearASel, yearBSel, salAEl, salBEl].forEach(function(el) {{
+    el.addEventListener('input', compare);
+    el.addEventListener('change', compare);
+  }});
+  compare();
+
+  // ────────── Tabs ──────────
+  document.querySelectorAll('.calc-tab').forEach(function(btn) {{
+    btn.addEventListener('click', function() {{
+      var tab = btn.dataset.tab;
+      document.querySelectorAll('.calc-tab').forEach(function(b) {{ b.classList.toggle('active', b === btn); }});
+      document.querySelectorAll('.calc-pane').forEach(function(p) {{ p.classList.toggle('active', p.dataset.pane === tab); }});
+    }});
+  }});
 </script>
 </body>
 </html>
@@ -795,11 +956,12 @@ def build(
     summary: dict,
     df_yearly: pd.DataFrame,
     df_monthly: pd.DataFrame,
+    df_cpi_full: pd.DataFrame,
     region: dict,
     all_regions: Iterable[dict],
     output_path: Path,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    html = build_html(summary, df_yearly, df_monthly, region, all_regions)
+    html = build_html(summary, df_yearly, df_monthly, df_cpi_full, region, all_regions)
     output_path.write_text(html, encoding="utf-8")
     log.info("Dashboard written → %s", output_path)

@@ -79,6 +79,7 @@ def run_region(region_code: str, all_regions: list, skip_fetch: bool = False) ->
         summary=summary,
         df_yearly=df_yearly,
         df_monthly=df_monthly,
+        df_cpi_full=df_cpi,
         region=region,
         all_regions=all_regions,
         output_path=ROOT / region["output_html"],
