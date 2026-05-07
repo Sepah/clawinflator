@@ -4,9 +4,10 @@ Your salary, adjusted for Swiss inflation — updated automatically every month.
 
 | | |
 |---|---|
-| 📊 **[Open dashboard](https://sepah.github.io/clawinflator/)** | View your live salary tracker |
-| ▶️ **[Run update now](https://github.com/Sepah/clawinflator/actions/workflows/monthly-update.yml)** | Fetch latest CPI & rebuild dashboard |
-| ✏️ **[Edit salary figures](https://github.com/Sepah/clawinflator/edit/main/config/salary_inputs.csv)** | Update your salary data |
+| 🇨🇭 **[Switzerland dashboard](https://sepah.github.io/clawinflator/)** | Your Swiss salary tracker |
+| 🇬🇧 **[UK dashboard](https://sepah.github.io/clawinflator/uk.html)** | UK salary tracker |
+| ▶️ **[Run update now](https://github.com/Sepah/clawinflator/actions/workflows/monthly-update.yml)** | Fetch latest CPI & rebuild both dashboards |
+| ✏️ **[Edit Swiss salary](https://github.com/Sepah/clawinflator/edit/main/config/salary_inputs.csv)** · **[Edit UK salary](https://github.com/Sepah/clawinflator/edit/main/config/salary_inputs_uk.csv)** | Update your salary data |
 
 > **To run an update:** click the link above → **Run workflow** button (top right) → **Run workflow**
 
@@ -69,7 +70,24 @@ Your dashboard is now live at:
 | **Cumulative inflation** | How much Swiss prices have risen since 2023 |
 | **Hourly rate** | Salary ÷ 2,184 h/year (42 h/week × 52 weeks) |
 
-CPI data is pulled automatically from Eurostat every run.
+There is also an **interactive calculator** on each dashboard — anyone can plug in their own salary, weekly hours and base year and see live calculations. No coding needed.
+
+---
+
+## 🌍 Region assumptions
+
+| | 🇨🇭 Switzerland | 🇬🇧 United Kingdom |
+|---|---|---|
+| Currency | CHF | GBP (£) |
+| Standard week | 42 h | 37.5 h *(UK full-time)* |
+| Annual hours | 2,184 | 1,950 |
+| Base year | 2023 | 2023 |
+| CPI source | Eurostat HICP (CH, all-items) | ONS CPI All-Items (D7BT) |
+| CPI base | 2015 = 100 | 2015 = 100 |
+
+**UK salary placeholder:** the file `config/salary_inputs_uk.csv` ships with a representative UK upper-mid salary trajectory (£45k → £50k, 2023→2026). Edit it with your real figures.
+
+**UK working hours assumption:** 37.5 h/week × 52 = 1,950 h/year is the standard UK full-time benchmark. Many contracts are 37 or 40 — adjust in `src/regions.py` if needed.
 
 ---
 
@@ -77,6 +95,8 @@ CPI data is pulled automatically from Eurostat every run.
 
 | File | What it is |
 |------|-----------|
-| `config/salary_inputs.csv` | **Your salary data — the only file you need to edit** |
-| `dashboard/index.html` | The dashboard (rebuilt automatically) |
+| `config/salary_inputs.csv` | **Swiss salary data — edit this** |
+| `config/salary_inputs_uk.csv` | **UK salary data — edit this** |
+| `dashboard/index.html` | Switzerland dashboard (auto-generated) |
+| `dashboard/uk.html` | UK dashboard (auto-generated) |
 | `data/processed/salary_tracker.xlsx` | Excel download with all data |

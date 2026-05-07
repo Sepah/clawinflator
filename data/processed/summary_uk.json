@@ -1,0 +1,20 @@
+{
+  "latest_cpi_period": "2026-03",
+  "latest_cpi_value": 141.0,
+  "base_cpi": 130.54,
+  "base_year": 2023,
+  "annual_hours": 1950.0,
+  "weekly_hours": 37.5,
+  "current_salary_year": 2026,
+  "nominal_monthly": 4167.0,
+  "nominal_annual": 50000.0,
+  "nominal_hourly": 25.64,
+  "real_monthly": 3857.92,
+  "real_annual": 46291.37,
+  "real_hourly": 23.74,
+  "cumulative_inflation_pct": 8.01,
+  "nominal_increase_vs_base_pct": 11.11,
+  "real_increase_vs_base_pct": 2.87,
+  "annual_gain_loss_vs_base": 1291.37,
+  "monthly_gain_loss_vs_base": 107.92
+}
