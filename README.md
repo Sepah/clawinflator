@@ -2,6 +2,14 @@
 
 Your salary, adjusted for Swiss inflation — updated automatically every month.
 
+| | |
+|---|---|
+| 📊 **[Open dashboard](https://sepah.github.io/clawinflator/)** | View your live salary tracker |
+| ▶️ **[Run update now](https://github.com/Sepah/clawinflator/actions/workflows/monthly-update.yml)** | Fetch latest CPI & rebuild dashboard |
+| ✏️ **[Edit salary figures](https://github.com/Sepah/clawinflator/edit/main/config/salary_inputs.csv)** | Update your salary data |
+
+> **To run an update:** click the link above → **Run workflow** button (top right) → **Run workflow**
+
 ---
 
 ## 🚀 First-time setup (do this once)
