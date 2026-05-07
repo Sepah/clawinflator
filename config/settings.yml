@@ -1,0 +1,8 @@
+base_year: 2023
+weekly_hours: 42
+weeks_per_year: 52
+currency: CHF
+# HICP base: 2015 = 100  (Eurostat harmonised index; only ratios matter for calculations)
+cpi_base_period: "2015"
+# Data source: Eurostat HICP for Switzerland, all items, monthly
+cpi_source: "Eurostat HICP (prc_hicp_midx, CH, CP00, I15)"

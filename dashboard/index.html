@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swiss Salary Tracker</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #1e3a5f;
+      --accent: #3b82f6;
+      --positive: #16a34a;
+      --negative: #dc2626;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --red: #d12b2b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: #0f172a;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .header-flag { font-size: 1.5rem; }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+    header p { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+    /* KPI cards */
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 1.5rem 0 0.75rem;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.35rem;
+    }
+    .kpi-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--primary);
+      word-break: break-word;
+    }
+    .kpi-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+    .positive { color: var(--positive) !important; }
+    .negative { color: var(--negative) !important; }
+    .kpi-value.positive { color: var(--positive); }
+    .kpi-value.negative { color: var(--negative); }
+
+    /* Charts */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+      gap: 1rem;
+    }
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .chart-card .plotly-graph-div { width: 100% !important; }
+
+    /* Table */
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    thead { background: var(--primary); color: white; }
+    th {
+      padding: 0.65rem 0.75rem;
+      text-align: right;
+      font-weight: 600;
+      white-space: nowrap;
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+    }
+    th:first-child { text-align: left; }
+    td {
+      padding: 0.55rem 0.75rem;
+      text-align: right;
+      border-top: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td:first-child { text-align: left; }
+    tbody tr:hover { background: #f8fafc; }
+    .fw-bold { font-weight: 600; }
+
+    /* Explanation box */
+    .explainer {
+      background: #eff6ff;
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.9rem 1rem;
+      font-size: 0.82rem;
+      color: #1e40af;
+      margin-top: 1rem;
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .kpi-value { font-size: 1.1rem; }
+      header h1 { font-size: 1.05rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="header-flag">🇨🇭</span>
+  <div>
+    <h1>Swiss Salary Purchasing-Power Tracker</h1>
+    <p>Real salary in 2023 CHF &mdash; updated monthly from Swiss Federal Statistical Office CPI data</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── Current salary ─────────────────────────────── -->
+  <div class="section-title">Current salary &mdash; 2026</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Nominal monthly</div>
+      <div class="kpi-value">CHF 8’100</div>
+      <div class="kpi-sub">Gross contractual</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nominal annual</div>
+      <div class="kpi-value">CHF 105’300</div>
+      <div class="kpi-sub">13 months equivalent</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nominal hourly</div>
+      <div class="kpi-value">CHF 48.21</div>
+      <div class="kpi-sub">42 h/week · 2,184 h/year</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nominal vs 2023</div>
+      <div class="kpi-value positive">+11.0%</div>
+      <div class="kpi-sub">Before inflation</div>
+    </div>
+  </div>
+
+  <!-- ── Real purchasing power ──────────────────────── -->
+  <div class="section-title">Real purchasing power in 2023 CHF &mdash; CPI through 2025-12</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Real monthly</div>
+      <div class="kpi-value">CHF 8’027</div>
+      <div class="kpi-sub">In 2023 purchasing power</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Real annual</div>
+      <div class="kpi-value">CHF 104’348</div>
+      <div class="kpi-sub">In 2023 purchasing power</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Real hourly</div>
+      <div class="kpi-value">CHF 47.78</div>
+      <div class="kpi-sub">In 2023 CHF</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Real vs 2023</div>
+      <div class="kpi-value positive">+10.0%</div>
+      <div class="kpi-sub">After inflation</div>
+    </div>
+  </div>
+
+  <!-- ── Inflation & gain/loss ──────────────────────── -->
+  <div class="section-title">Inflation &amp; purchasing-power gain / loss</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Cumulative CPI inflation</div>
+      <div class="kpi-value" style="color: var(--red)">+0.9%</div>
+      <div class="kpi-sub">Since 2023 annual avg (Swiss LIK)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Annual gain/loss vs 2023</div>
+      <div class="kpi-value positive">CHF 9’448</div>
+      <div class="kpi-sub">Real CHF per year</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Monthly gain/loss vs 2023</div>
+      <div class="kpi-value positive">CHF 727</div>
+      <div class="kpi-sub">Real CHF per month</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Latest CPI</div>
+      <div class="kpi-value">107.07</div>
+      <div class="kpi-sub">Swiss LIK (base Dec 2020 = 100) &mdash; 2025-12</div>
+    </div>
+  </div>
+
+  <div class="explainer">
+    <strong>What is &ldquo;real salary&rdquo;?</strong> &mdash;
+    Real salary adjusts your nominal (contractual) salary for inflation, expressing it in
+    2023 purchasing power using the Swiss Consumer Price Index (LIK/IPC) published by the
+    Federal Statistical Office (BFS/OFS). A real increase means your salary bought
+    <em>more</em> goods and services than in 2023; a real decrease means the opposite.
+    Formula: Real&nbsp;salary = Nominal&nbsp;salary &times; CPI<sub>2023</sub> / CPI<sub>current</sub>
+  </div>
+
+  <!-- ── Charts ─────────────────────────────────────── -->
+  <div class="section-title">Charts</div>
+  <div class="chart-grid">
+    <div class="chart-card"><div id="chart-yearly"></div></div>
+    <div class="chart-card"><div id="chart-hourly"></div></div>
+    <div class="chart-card"><div id="chart-inflation"></div></div>
+    <div class="chart-card"><div id="chart-gain"></div></div>
+  </div>
+
+  <!-- ── Yearly summary table ───────────────────────── -->
+  <div class="section-title">Year-by-year detail</div>
+  <div class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Nom. Monthly</th>
+            <th>Nom. Annual</th>
+            <th>Nom. vs 2023</th>
+            <th>CPI inflation</th>
+            <th>Real Monthly</th>
+            <th>Real Annual</th>
+            <th>Annual G/L</th>
+            <th>Real vs 2023</th>
+            <th>Nom. Hourly</th>
+            <th>Real Hourly</th>
+          </tr>
+        </thead>
+        <tbody>
+
+        <tr>
+          <td class="fw-bold">2023</td>
+          <td>CHF 7’300</td>
+          <td>CHF 94’900</td>
+          <td>+0.0%</td>
+          <td>+0.0%</td>
+          <td>CHF 7’300</td>
+          <td>CHF 94’900</td>
+          <td class="positive">CHF 0</td>
+          <td class="positive">+0.0%</td>
+          <td>CHF 43.45</td>
+          <td>CHF 43.45</td>
+        </tr>
+
+        <tr>
+          <td class="fw-bold">2024</td>
+          <td>CHF 7’450</td>
+          <td>CHF 96’850</td>
+          <td>+2.1%</td>
+          <td>+1.1%</td>
+          <td>CHF 7’371</td>
+          <td>CHF 95’817</td>
+          <td class="positive">CHF 917</td>
+          <td class="positive">+1.0%</td>
+          <td>CHF 44.35</td>
+          <td>CHF 43.87</td>
+        </tr>
+
+        <tr>
+          <td class="fw-bold">2025</td>
+          <td>CHF 7’600</td>
+          <td>CHF 98’800</td>
+          <td>+4.1%</td>
+          <td>+1.2%</td>
+          <td>CHF 7’511</td>
+          <td>CHF 97’644</td>
+          <td class="positive">CHF 2’744</td>
+          <td class="positive">+2.9%</td>
+          <td>CHF 45.24</td>
+          <td>CHF 44.71</td>
+        </tr>
+
+        <tr>
+          <td class="fw-bold">2026</td>
+          <td>CHF 8’100</td>
+          <td>CHF 105’300</td>
+          <td>+11.0%</td>
+          <td>nan%</td>
+          <td>CHF nan</td>
+          <td>CHF nan</td>
+          <td class="negative">CHF nan</td>
+          <td class="negative">nan%</td>
+          <td>CHF 48.21</td>
+          <td>CHF nan</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  Data: Swiss Federal Statistical Office (BFS/OFS) &mdash; LIK (Landesindex der Konsumentenpreise).
+  Dashboard generated on 07 May 2026, 13:14 UTC.
+  Salary data: contractual gross, 42&nbsp;h/week, 2&thinsp;184&nbsp;h/year.
+</footer>
+
+<script>
+  var CFG = {responsive: true, displayModeBar: false};
+
+  function renderChart(id, payload) {
+    if (!payload) return;
+    Plotly.newPlot(id, payload.traces, Object.assign({
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+      font: {family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size: 12},
+    }, payload.layout), CFG);
+  }
+
+  renderChart("chart-yearly",    {"traces": [{"x": [2023, 2024, 2025, 2026], "y": [94900.0, 96850.0, 98800.0, 105300.0], "name": "Nominal salary", "type": "bar", "marker": {"color": "#3b82f6"}}, {"x": [2023, 2024, 2025, 2026], "y": [94900.0, 95817.0, 97644.0, null], "name": "Real salary (2023 CHF)", "type": "bar", "marker": {"color": "#22c55e"}}], "layout": {"title": "Annual salary: nominal vs real", "barmode": "group", "yaxis": {"title": "CHF", "tickformat": ",.0f"}, "xaxis": {"title": "Year", "type": "category"}, "legend": {"orientation": "h", "y": -0.2}, "margin": {"t": 50, "b": 60}}});
+  renderChart("chart-hourly",    {"traces": [{"x": [2023, 2024, 2025, 2026], "y": [43.45, 44.35, 45.24, 48.21], "name": "Nominal hourly rate", "type": "scatter", "mode": "lines+markers", "line": {"color": "#3b82f6", "width": 2}}, {"x": [2023, 2024, 2025, 2026], "y": [43.45, 43.87, 44.71, null], "name": "Real hourly rate (2023 CHF)", "type": "scatter", "mode": "lines+markers", "line": {"color": "#22c55e", "width": 2}}], "layout": {"title": "Hourly rate: nominal vs real", "yaxis": {"title": "CHF/hour", "tickformat": ",.2f"}, "xaxis": {"title": "Year", "type": "category"}, "legend": {"orientation": "h", "y": -0.2}, "margin": {"t": 50, "b": 60}}});
+  renderChart("chart-inflation", {"traces": [{"x": ["2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12"], "y": [-1.05, -0.53, -0.54, -0.28, -0.07, -0.0, 0.45, 0.61, 0.44, 0.58, 0.06, 0.32, 0.44, 0.66, 0.6, 1.13, 1.39, 1.26, 1.69, 1.66, 1.32, 1.3, 0.77, 0.71, 0.66, 0.8, 0.71, 1.42, 1.22, 1.47, 1.81, 1.7, 1.37, 1.37, 0.76, 0.91], "name": "Cumulative inflation since 2023", "type": "scatter", "mode": "lines", "fill": "tozeroy", "line": {"color": "#f59e0b", "width": 2}, "fillcolor": "rgba(245,158,11,0.15)"}], "layout": {"title": "Cumulative CPI inflation since 2023 (%)", "yaxis": {"title": "% vs 2023 average", "ticksuffix": "%"}, "xaxis": {"title": "Month"}, "margin": {"t": 50, "b": 60}, "shapes": [{"type": "line", "x0": "2023-01", "x1": "2025-12", "y0": 0, "y1": 0, "line": {"dash": "dot", "color": "#6b7280"}}]}});
+  renderChart("chart-gain",      {"traces": [{"x": ["2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12"], "y": [1005.0, 505.0, 514.0, 271.0, 64.0, 1.0, -426.0, -576.0, -417.0, -550.0, -61.0, -302.0, 1524.0, 1317.0, 1371.0, 868.0, 619.0, 744.0, 345.0, 371.0, 690.0, 708.0, 1209.0, 1263.0, 3254.0, 3116.0, 3199.0, 2515.0, 2706.0, 2470.0, 2145.0, 2244.0, 2569.0, 2569.0, 3153.0, 3006.0], "name": "Annual gain/loss vs 2023 baseline", "type": "bar", "marker": {"color": ["#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#dc2626", "#dc2626", "#dc2626", "#dc2626", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a"]}}], "layout": {"title": "Real annual purchasing-power gain/loss vs 2023 (CHF)", "yaxis": {"title": "CHF", "tickformat": ",.0f"}, "xaxis": {"title": "Month"}, "margin": {"t": 50, "b": 60}, "shapes": [{"type": "line", "x0": "2023-01", "x1": "2025-12", "y0": 0, "y1": 0, "line": {"dash": "dot", "color": "#6b7280"}}]}});
+</script>
+</body>
+</html>
