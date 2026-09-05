@@ -1,6 +1,6 @@
 {
-  "latest_cpi_period": "2026-06",
-  "latest_cpi_value": 142.5,
+  "latest_cpi_period": "2026-07",
+  "latest_cpi_value": 142.9,
   "base_cpi": 130.54,
   "base_year": 2023,
   "annual_hours": 1950.0,
@@ -9,12 +9,12 @@
   "nominal_monthly": 5167.0,
   "nominal_annual": 62000.0,
   "nominal_hourly": 31.79,
-  "real_monthly": 4733.4,
-  "real_annual": 56797.08,
-  "real_hourly": 29.13,
-  "cumulative_inflation_pct": 9.16,
+  "real_monthly": 4720.15,
+  "real_annual": 56638.09,
+  "real_hourly": 29.05,
+  "cumulative_inflation_pct": 9.47,
   "nominal_increase_vs_base_pct": 0.0,
-  "real_increase_vs_base_pct": -8.39,
-  "annual_gain_loss_vs_base": -5202.92,
-  "monthly_gain_loss_vs_base": -433.6
+  "real_increase_vs_base_pct": -8.65,
+  "annual_gain_loss_vs_base": -5361.91,
+  "monthly_gain_loss_vs_base": -446.85
 }
